@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>1941 Year Calendar</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--accent:#a855f7;--accent-2:#ec4899}
+    html,body{height:100%;margin:0}
+    body{
+      font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background: linear-gradient(135deg, #fbcfe8, #c084fc, #93c5fd);
+      background-size: cover;
+      margin:0;
+      color:#0f172a;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+    h1{text-align:center;margin:20px 0 6px 0}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;width:100%;max-width:1500px;margin:12px auto;padding:0 12px;box-sizing:border-box}
+    .month{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06);opacity:0.95;width:100%;box-sizing:border-box}
+    .month-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .month-title{font-weight:700}
+    table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+    th,td{padding:6px;text-align:center}
+    thead th{font-weight:600;font-size:12px;color:#0f172a;opacity:0.9}
+    tbody td{height:36px}
+    .daynum{display:inline-block;width:28px;height:28px;line-height:28px;border-radius:6px}
+    .today{outline:2px solid rgba(59,130,246,0.15)}
+    .holiday{background:linear-gradient(90deg,rgba(236,72,153,0.12),rgba(168,85,247,0.06));border-radius:6px;cursor:pointer}
+    .holiday .daynum{background:rgba(236,72,153,0.1);color:var(--accent-2);font-weight:600}
+    .muted{color:#94a3b8}
+    .legend{max-width:1500px;width:100%;margin:8px auto 18px;padding:8px 12px;display:flex;gap:12px;align-items:center;background:rgba(255,255,255,0.8);border-radius:8px;box-sizing:border-box}
+    .legend span{display:flex;gap:6px;align-items:center}
+    .dot{width:12px;height:12px;border-radius:3px}
+    .dot.h{background:var(--accent-2)}
+    .controls{text-align:center;margin-bottom:10px;background:rgba(255,255,255,0.8);padding:6px;border-radius:8px;max-width:1500px;width:100%;box-sizing:border-box}
+    .controls a{color:var(--accent);text-decoration:none;font-weight:600}
+
+    /* Modal Styles */
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,0.6);}
+    .modal-content{background:#fff;margin:5% auto;padding:20px;border-radius:12px;width:95%;max-width:500px;box-shadow:0 6px 20px rgba(0,0,0,0.2);animation:fadeIn 0.3s ease-in-out}
+    .close{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer}
+    .close:hover{color:#000}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+  <h1>Calendar — Year 1941</h1>
+  <div class="controls"><em>Highlighted dates are holidays. Click to learn more.</em></div>
+  <div class="legend">
+    <span><span class="dot h"></span> Common regular holiday</span>
+  </div>
+  <div id="calendar" class="grid" aria-live="polite"></div>
+
+  <!-- Modal -->
+  <div id="holidayModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2 id="holidayTitle"></h2>
+      <p id="holidayDesc"></p>
+      <img id="holidayImg" src="" alt="Holiday Image" style="width:100%;border-radius:8px;display:none;">
+    </div>
+  </div>
+
+  <script>
+    // Holidays (common regular holidays)
+    const holidays = {
+      '1941-01-01': {title:"New Year's Day", desc:"New Year's Day — the first day of the Gregorian year.", img:"https://upload.wikimedia.org/wikipedia/commons/6/65/New_Year_Fireworks.jpg"},
+      '1941-05-01': {title:"Labor Day / May Day", desc:"Labor Day or International Workers' Day, observed on May 1 in many countries.", img:"https://upload.wikimedia.org/wikipedia/commons/d/d3/Labour_Day_parade.jpg"},
+      '1941-06-12': {title:"Philippine Independence Day", desc:"Philippine Independence Day — commemorates the declaration of independence from Spain on June 12, 1898.", img:"https://upload.wikimedia.org/wikipedia/commons/5/5a/Philippine_Flag_Day.jpg"},
+      '1941-07-04': {title:"Independence Day (USA)", desc:"Independence Day (United States) celebrated on July 4.", img:"https://upload.wikimedia.org/wikipedia/commons/2/2c/Fireworks_on_Independence_Day.jpg"},
+      '1941-11-01': {title:"All Saints' Day", desc:"All Saints' Day — a Christian solemnity celebrated in honor of all saints on November 1.", img:"https://upload.wikimedia.org/wikipedia/commons/4/4e/All_Saints_Day_Cemetery.jpg"},
+      '1941-11-02': {title:"All Souls' Day", desc:"All Souls' Day — a day of prayer and remembrance for the souls of those who have died, observed on November 2.", img:"https://upload.wikimedia.org/wikipedia/commons/e/e5/All_Souls_Day_Candles.jpg"},
+      '1941-11-30': {title:"Bonifacio Day", desc:"Bonifacio Day — commemorates the birthday of revolutionary leader Andrés Bonifacio on November 30.", img:"https://upload.wikimedia.org/wikipedia/commons/8/88/Bonifacio_Monument.jpg"},
+      '1941-12-25': {title:"Christmas Day", desc:"Christmas Day — celebrated on December 25.", img:"https://upload.wikimedia.org/wikipedia/commons/6/6f/Christmas_tree_with_lights.jpg"},
+      '1941-12-30': {title:"Rizal Day", desc:"Rizal Day — commemorates the life and works of national hero José Rizal, observed on December 30.", img:"https://upload.wikimedia.org/wikipedia/commons/3/3d/Jose_Rizal_Monument_Luneta.jpg"}
+    };
+
+    function getISOWeek(date) {
+      const tmp = new Date(date.getTime());
+      tmp.setHours(0,0,0,0);
+      tmp.setDate(tmp.getDate() + 3 - (tmp.getDay() + 6) % 7);
+      const week1 = new Date(tmp.getFullYear(),0,4);
+      return 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6)%7) / 7);
+    }
+
+    function buildCalendar(year){
+      const container = document.getElementById('calendar');
+      container.innerHTML='';
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const dayNames = ['Wk','Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+      for(let m=0;m<12;m++){
+        const card = document.createElement('section');
+        card.className='month';
+        const header = document.createElement('div'); header.className='month-header';
+        header.innerHTML = `<div class="month-title">${monthNames[m]} ${year}</div>`;
+        card.appendChild(header);
+
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const trh = document.createElement('tr');
+        trh.innerHTML = dayNames.map(d=>`<th>${d}</th>`).join('');
+        thead.appendChild(trh); table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+
+        let firstDay = new Date(year, m, 1).getDay();
+        let daysInMonth = new Date(year,m+1,0).getDate();
+        let weeks = [];
+        let day = 1;
+        let week = new Array(7).fill(0);
+        for(let i=0;i<7;i++){
+          if(i<firstDay) week[i]=0; else {week[i]=day; day++;}
+        }
+        weeks.push(week);
+        while(day<=daysInMonth){
+          week = new Array(7).fill(0);
+          for(let i=0;i<7 && day<=daysInMonth;i++){week[i]=day;day++;}
+          weeks.push(week);
+        }
+
+        weeks.forEach(wk=>{
+          const tr = document.createElement('tr');
+          let firstRealDay = wk.find(d=>d>0);
+          let weekDate = new Date(year, m, firstRealDay||1);
+          let weekNum = getISOWeek(weekDate);
+          tr.innerHTML = `<td class="muted" style="width:32px;font-weight:600">${weekNum}</td>` +
+            wk.map(d=>{
+              if(d===0) return '<td class="muted">&nbsp;</td>';
+              const iso = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+              const isHoliday = holidays[iso] ? true : false;
+              let cls = isHoliday ? 'holiday' : '';
+              return `<td class="${cls}" data-date="${iso}"><div class="daynum">${d}</div></td>`;
+            }).join('');
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        card.appendChild(table);
+        container.appendChild(card);
+      }
+    }
+
+    buildCalendar(1941);
+
+    // Modal logic
+    const modal = document.getElementById("holidayModal");
+    const modalTitle = document.getElementById("holidayTitle");
+    const modalDesc = document.getElementById("holidayDesc");
+    const modalImg = document.getElementById("holidayImg");
+    const closeBtn = document.querySelector(".close");
+
+    document.addEventListener('click', function(e){
+      if(e.target.closest('.holiday')){
+        const date = e.target.closest('.holiday').dataset.date;
+        const holiday = holidays[date];
+        if(holiday){
+          modalTitle.textContent = holiday.title;
+          modalDesc.textContent = holiday.desc;
+          if(holiday.img){
+            modalImg.src = holiday.img;
+            modalImg.style.display = 'block';
+          } else {
+            modalImg.style.display = 'none';
+          }
+          modal.style.display = 'block';
+        }
+      }
+    });
+
+    closeBtn.onclick = function(){modal.style.display='none'}
+    window.onclick = function(event){if(event.target==modal){modal.style.display='none'}}
+  </script>
+</body>
+</html>
